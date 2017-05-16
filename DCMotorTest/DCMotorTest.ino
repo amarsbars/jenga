@@ -41,9 +41,9 @@
 #define TARGET_DISTANCE     60.96 //2 ft in cm
 #define PLAYING_FIELD       67.5
 
-
+// 90 degree turn for one wheel is 4608
 #define DEBUG
-#define SERVO_ATTACHED
+//#define SERVO_ATTACHED
 //#define PREDEF
 //#define TEST_WHEELBASE
 
@@ -58,10 +58,10 @@ float KI                  = 1.0;
 float KD                  = 0.0;
 
 volatile int gripper_pos = 0;
-volatile long EncCountL_Last = 0;
-volatile long EncCountL_Start = 0;
-volatile int EncCountL = 0;
-volatile int EncCountR = 0;
+volatile float EncCountL_Last = 0;
+volatile float EncCountL_Start = 0;
+volatile float EncCountL = 0;
+volatile float EncCountR = 0;
 //volatile int EncStateL1 = LOW;
 //volatile int EncStateL2 = LOW;
 //volatile int EncStateL1_last = LOW;
@@ -72,12 +72,8 @@ volatile float X_pos = 0;
 volatile float Y_pos = 0;
 
 
-volatile long EncCountR_Last = 0;
-volatile long EncCountR_Start = 0;
-volatile int EncStateR1 = LOW;
-volatile int EncStateR2 = LOW;
-volatile int EncStateR1_last = LOW;
-volatile int EncStateR2_last = LOW;
+volatile float EncCountR_Last = 0;
+volatile float EncCountR_Start = 0;
 
 volatile long LastTime = 0;
 volatile long NewTime = 0;
@@ -192,16 +188,18 @@ void ControlThread() {
     //   Serial.println(targetDistanceR[currentTargetIdx % NUM_TARGETS]);
     
     // Save last reading to get velocity measurement
-    int EncCountL_Last = EncCountL;
-    int EncCountR_Last = EncCountR;
-    Serial.print("Encoder L: "); Serial.print(EncCountL); Serial.print("\t");
-    Serial.print("Encoder R: "); Serial.print(EncCountR); Serial.print("\n");
+    EncCountL_Last = EncCountL;
+    EncCountR_Last = EncCountR;
+    PrintT("Encoder L", EncCountL);
+    PrintN("Encoder R", EncCountR);
+//    Serial.print("Encoder L: "); Serial.print(EncCountL); Serial.print("\t");
+//    Serial.print("Encoder R: "); Serial.print(EncCountR); Serial.print("\n");
     
     // Read current encoder position of wheels;
     EncCountL = LeftWheelEncoder.read();
     EncCountR = RightWheelEncoder.read();
-    Serial.print(EncCountL);
-    Serial.print(EncCountR);
+    PrintT("Encoder L", EncCountL);
+    PrintN("Encoder R", EncCountR);
 
     StateEstimate();
     

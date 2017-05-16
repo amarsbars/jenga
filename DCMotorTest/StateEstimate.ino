@@ -4,10 +4,10 @@ void StateEstimate() {
   float dr = (EncCountR - EncCountR_Last) / PULSES_CM;
   float V_L = (float)dl / dt; // numerically calculate velocity
   float V_R = (float)dr / dt;
-  Serial.print("deltaL: "); Serial.println(dl); Serial.print("\t");
-  Serial.print("deltaR: "); Serial.println(dr); Serial.print("\n");
-  Serial.print("VelR: "); Serial.println(V_L); Serial.print("\t");
-  Serial.print("VelL: "); Serial.println(V_R); Serial.print("\n");
+  Serial.print("deltaL: "); Serial.print(dl); Serial.print("\t");
+  Serial.print("deltaR: "); Serial.print(dr); Serial.print("\n");
+  Serial.print("VelR: "); Serial.print(V_L); Serial.print("\t");
+  Serial.print("VelL: "); Serial.print(V_R); Serial.print("\n");
 
   // Calculate Omega for robot
   float Omega = (V_R - V_L) / (float) WHEEL_BASE;
