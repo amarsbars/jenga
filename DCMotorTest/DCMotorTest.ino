@@ -57,19 +57,15 @@ float KPW                 = 1.5;
 float KI                  = 1.0;
 float KD                  = 0.0;
 
-
-
-
 volatile int gripper_pos = 0;
-volatile int wheel_c = WHEEL_CIRCUMFERENCE;
 volatile long EncCountL_Last = 0;
 volatile long EncCountL_Start = 0;
 volatile int EncCountL = 0;
 volatile int EncCountR = 0;
-volatile int EncStateL1 = LOW;
-volatile int EncStateL2 = LOW;
-volatile int EncStateL1_last = LOW;
-volatile int EncStateL2_last = LOW;
+//volatile int EncStateL1 = LOW;
+//volatile int EncStateL2 = LOW;
+//volatile int EncStateL1_last = LOW;
+//volatile int EncStateL2_last = LOW;
 
 volatile float Theta = 0;
 volatile float X_pos = 0;
@@ -154,9 +150,6 @@ void test_wheelbase(){
   // turn 180 around Left Wheel
   targetDistanceL[3] = 0;
   targetDistanceR[3] = WHEEL_BASE * PI_VALUE;
-  
-
-  
 }
 
 void demo1() {
@@ -183,15 +176,13 @@ void loop()
 void ControlThread() {
   NewTime = micros();
 
-#ifndef PREDEF
-  // read serial to check if message has been sent
-  if (Serial.available())
-  {
-    SerialRead();
-  }
-#endif
-
-
+  #ifndef PREDEF
+    // read serial to check if message has been sent
+    if (Serial.available())
+    {
+      SerialRead();
+    }
+  #endif
 
   // if message has been sent, start moving robot to location
   if (currentTargetIdx == nextTargetIdx)
@@ -212,33 +203,7 @@ void ControlThread() {
     Serial.print(EncCountL);
     Serial.print(EncCountR);
 
-    // Caluclate velocity
-    float dl = (EncCountL - EncCountL_Last) / PULSES_CM;
-    float dr = (EncCountR - EncCountR_Last) / PULSES_CM;
-    float V_L = (float)dl / dt;
-    float V_R = (float)dr / dt;
-    Serial.println(dl);
-    Serial.println(dr);
-    Serial.println(V_L);
-    Serial.println(V_R);
-
-    // Calculate Omega for robot
-    float Omega = (V_R - V_L) / (float) WHEEL_BASE;
-    
-    // Calcuate radius instantaneous center of rotation
-    float R = (float)WHEEL_BASE / 2.0 * (V_L + V_R) / (V_L + V_R);
-
-    // Calculate Instantaneous Center of Roatation
-//    float ICC = 
-
-    // Save last position readings
-    float X_pos_last = X_pos;
-    float Y_pos_last = Y_pos;
-    
-    // Calculate theta relative to some absolute position.  Useful for keeping global x and y
-    Theta = Theta + Omega * dt;
-    X_pos = X_pos_last + R * cos(Theta) - R * sin(Theta);
-    Y_pos = Y_pos_last + R * sin(Theta) + R * cos(Theta);
+    StateEstimate();
     
     // get error for each wheel from desired end point
     float errorL = targetDistanceL[currentTargetIdx % NUM_TARGETS] - ((float)(EncCountL - EncCountL_Start) / PULSES_CM); // cm
@@ -296,7 +261,6 @@ void ControlThread() {
     //    float state1 = (float)EncCountL / PULSES_REVOLUTION;
     float state_d = 0.5 * ((float)(EncCountL - EncCountL_Start) / PULSES_CM) + 0.5 * ((float)(EncCountR - EncCountR_Start) / PULSES_CM);
 //    float x_pos = 
-//    float state_h = (float)(atan2(EncCountL, EncCountR) * 90.0 / 3.14);
     prev_errorL = errorL;
     prev_errorR = errorR;
 
@@ -313,11 +277,9 @@ void ControlThread() {
     Serial.print(X_pos); Serial.print(", "); Serial.println(Y_pos);
 #endif
 
-    if (speed_percentL > SPEED_MAX)
-      speed_percentL = SPEED_MAX;
-
-    if (speed_percentR > SPEED_MAX)
-      speed_percentR = SPEED_MAX;
+    // clamp
+    speed_percentL = max(SPEED_MIN, min(SPEED_MAX, speed_percentL));
+    speed_percentR = max(SPEED_MIN, min(SPEED_MAX, speed_percentR));
 
     // send motor command
     if (errorL > 0) {
@@ -333,7 +295,8 @@ void ControlThread() {
     else {
       backwardR((int) - speed_percentR);
     }
-
+    
+    // dead band
     if (abs(errorL) <= ETHRESHOLD && abs(errorR) <= ETHRESHOLD)
     {
       EncCountL_Start = EncCountL;
@@ -348,46 +311,9 @@ void ControlThread() {
   }
 }
 
-void forwardL(int speed_percent) {
-  int speed_pwm = map(speed_percent, SPEED_MIN, SPEED_MAX, PWM_MIN_L, PWM_MAX_L);
-
-  analogWrite(ENA, speed_pwm);
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, LOW);         // left wheel goes forward
-}
-
-void backwardL(int speed_percent) {
-  int speed_pwm = map(speed_percent, SPEED_MIN, SPEED_MAX, PWM_MIN_L, PWM_MAX_L);
-
-  analogWrite(ENA, speed_pwm);
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);         // left wheel goes forward
-}
-
-void forwardR(int speed_percent) {
-  int speed_pwm = map(speed_percent, SPEED_MIN, SPEED_MAX, PWM_MIN_R, PWM_MAX_R);
-
-  analogWrite(ENB, speed_pwm);
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, LOW);         // right wheel goes forward
-}
-
-void backwardR(int speed_percent) {
-  int speed_pwm = map(speed_percent, SPEED_MIN, SPEED_MAX, PWM_MIN_R, PWM_MAX_R);
-
-  analogWrite(ENB, speed_pwm);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, HIGH);         // right wheel goes forward
-}
-
-void halt() {
-  digitalWrite(ENA, LOW);
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);        //left wheel holds still
-  digitalWrite(ENB, LOW);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, LOW);        // right wheel holds still
-}
+//void UpdateController() {
+//  int i = 1;
+//}
 
 void SerialRead() {
   byteIn = Serial.read();
@@ -404,11 +330,10 @@ void SerialRead() {
     OpenGripper();
   }
 
-  if (byteIn == 'd') {
-    wheel_c = wheel_c + (float)Serial.parseInt() / 10.0;
-    Serial.print("New Wheel Base: "); Serial.println(wheel_c);
-    
-  }
+//  if (byteIn == 'd') {
+//    wheel_c = wheel_c + (float)Serial.parseInt() / 10.0;
+//    Serial.print("New Wheel Base: "); Serial.println(wheel_c);
+//  }
 }
 
 //void mapSpeed(int val) {
@@ -431,3 +356,4 @@ void OpenGripper() {
   Serial.println("Opening Gripper");
   gripper_pos = 0;
 }
+
