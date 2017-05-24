@@ -33,3 +33,24 @@ plot(state_t(:,1), state_t(:,2), 'go')
 % axis([0,1,0,1])
 hold off;
 
+%% Controller Test
+state_current  = [0, 0.0, 0, pi/2];
+% state_goal = [1, 0, 0, pi/2];
+state_goal = [1, 1, 0, 0];
+errorTotal = 0;
+errorLast = 0;
+pwm = controller(state_goal, state_current, errorTotal, errorLast);
+[aL, aR] = pwm2torque(pwm)
+
+%% Planner Test
+state_current  = [0, 0.0, 0, pi/2];
+% state_goal = [1, 0, 0, pi/2];
+% state_goal = [10, 10, 0, 0];
+state_goal = [10, 10, 0, 0];
+way_points = planner(state_goal, state_current);
+
+%% Executer Test
+state_current  = [0, 0.0, 0, pi/2];
+state_goal = [10, 0, 0, pi/2];
+way_points = planner(state_goal, state_current);
+executer(way_points)
